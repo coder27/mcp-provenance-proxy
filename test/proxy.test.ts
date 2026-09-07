@@ -1,3 +1,4 @@
+import { spawn } from 'node:child_process';
 import { readdirSync } from 'node:fs';
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -126,5 +127,79 @@ describe('runProxy: transparent pass-through + provenance recording', () => {
     // this just spells out the expectation for readability)
     const seqs = records.map((r) => r.seq).sort((a, b) => a - b);
     expect(seqs).toEqual(Array.from({ length: seqs.length }, (_, i) => i + 1));
+  }, 20000);
+
+  it('resolves with a non-zero exit code and a clear warning when the upstream command cannot be spawned', async () => {
+    const clientInput = new PassThrough();
+    const clientOutput = new PassThrough();
+    const stderr = new PassThrough();
+    const stderrChunks: string[] = [];
+    stderr.on('data', (chunk: Buffer) => stderrChunks.push(chunk.toString()));
+
+    const config: ProxyConfig = {
+      upstream: { command: 'mcp-provenance-proxy-this-command-does-not-exist', args: [] },
+      storageDir,
+    };
+
+    const exitCode = await runProxy({ config, clientInput, clientOutput, stderr });
+    expect(exitCode).toBe(1);
+    expect(stderrChunks.join('')).toMatch(/failed to start upstream command/);
+  });
+
+  it('stops and exits non-zero, without orphaning the upstream process, on an oversized line', async () => {
+    const clientInput = new PassThrough();
+    const clientOutput = new PassThrough();
+    const stderr = new PassThrough();
+    const stderrChunks: string[] = [];
+    stderr.on('data', (chunk: Buffer) => stderrChunks.push(chunk.toString()));
+
+    const config = makeConfig([]);
+    let spawnedPid: number | undefined;
+    const spy: typeof spawn = (...args: Parameters<typeof spawn>) => {
+      // @ts-expect-error -- spawn's overloads don't unify cleanly through a spread forward
+      const child = spawn(...args);
+      spawnedPid = child.pid;
+      return child;
+    };
+
+    const exitPromise = runProxy({
+      config,
+      clientInput,
+      clientOutput,
+      stderr,
+      spawn: spy,
+      maxLineBytes: 64,
+    });
+
+    clientInput.write('x'.repeat(100)); // no newline: exceeds the 64-byte cap before completing a line
+    const exitCode = await exitPromise;
+
+    expect(exitCode).toBe(1);
+    expect(stderrChunks.join('')).toMatch(/client->server line exceeded 64 bytes/);
+
+    expect(spawnedPid).toBeDefined();
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    expect(() => process.kill(spawnedPid!, 0)).toThrow(); // ESRCH: no such process -> not orphaned
+  });
+
+  it('does not fire the oversized guard for lines within the configured cap', async () => {
+    const clientInput = new PassThrough();
+    const clientOutput = new PassThrough();
+    const reader = new LineReader(clientOutput);
+    const exitPromise = runProxy({ config: makeConfig([]), clientInput, clientOutput, maxLineBytes: 4096 });
+
+    clientInput.write(
+      `${JSON.stringify({
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'initialize',
+        params: { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 't', version: '0.0.1' } },
+      })}\n`,
+    );
+    const response = JSON.parse(await reader.next());
+    expect(response.id).toBe(1);
+
+    clientInput.end();
+    expect(await exitPromise).toBe(0);
   }, 20000);
 });

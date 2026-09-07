@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { listDrift } from '../src/commands/drift.js';
 import { replaySession } from '../src/commands/replay.js';
+import { listSessions } from '../src/commands/sessions.js';
 import { verifyCommand } from '../src/commands/verify.js';
 import { main } from '../src/cli.js';
 import { buildDriftRecord, buildMessageRecord } from '../src/provenance/record.js';
@@ -127,6 +128,23 @@ describe('listDrift', () => {
   });
 });
 
+describe('listSessions', () => {
+  it('reports a clear message when there are no sessions', () => {
+    expect(listSessions(storageDir)).toBe('No sessions found.');
+  });
+
+  it('lists sessions newest-first with a record/drift summary', () => {
+    seedSession('sess-1');
+    seedSession('sess-2');
+    const output = listSessions(storageDir);
+    const lines = output.split('\n');
+    expect(lines).toHaveLength(2);
+    // sessionId sort is lexicographic descending -> sess-2 first
+    expect(lines[0]).toMatch(/^sess-2\s+records=3\s+drift=1\s+/);
+    expect(lines[1]).toMatch(/^sess-1\s+records=3\s+drift=1\s+/);
+  });
+});
+
 describe('cli main() dispatch', () => {
   it('returns 0 and prints OK for a valid verify', async () => {
     seedSession('sess-1');
@@ -134,6 +152,15 @@ describe('cli main() dispatch', () => {
     const code = await main(['verify', 'sess-1', '--storage-dir', storageDir]);
     expect(code).toBe(0);
     expect(logSpy).toHaveBeenCalledWith(expect.stringMatching(/^OK:/));
+    logSpy.mockRestore();
+  });
+
+  it('returns 0 and lists sessions for the "sessions" subcommand', async () => {
+    seedSession('sess-1');
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    const code = await main(['sessions', '--storage-dir', storageDir]);
+    expect(code).toBe(0);
+    expect(logSpy).toHaveBeenCalledWith(expect.stringMatching(/^sess-1/));
     logSpy.mockRestore();
   });
 
@@ -150,5 +177,21 @@ describe('cli main() dispatch', () => {
     expect(await main(['replay'])).toBe(1);
     expect(await main(['verify'])).toBe(1);
     errSpy.mockRestore();
+  });
+
+  it('prints usage and exits 0 for --help/-h', async () => {
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    expect(await main(['--help'])).toBe(0);
+    expect(await main(['-h'])).toBe(0);
+    expect(logSpy).toHaveBeenCalledWith(expect.stringMatching(/^Usage:/));
+    logSpy.mockRestore();
+  });
+
+  it('prints the package version and exits 0 for --version/-v', async () => {
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    expect(await main(['--version'])).toBe(0);
+    expect(await main(['-v'])).toBe(0);
+    expect(logSpy).toHaveBeenCalledWith(expect.stringMatching(/^\d+\.\d+\.\d+$/));
+    logSpy.mockRestore();
   });
 });
