@@ -74,12 +74,16 @@ See [`examples/filesystem`](examples/filesystem) for this wired up against a rea
 
 ```
 mcp-provenance-proxy run --config <path>
+mcp-provenance-proxy sessions [--storage-dir <dir>]
 mcp-provenance-proxy replay <sessionId> [--storage-dir <dir>]
 mcp-provenance-proxy verify <sessionId> [--storage-dir <dir>]
 mcp-provenance-proxy drift [--session <sessionId>] [--storage-dir <dir>]
+mcp-provenance-proxy --help | --version
 ```
 
-`run` is the proxy itself — it never returns until the upstream server exits, and exits with the same code.
+`run` is the proxy itself — it never returns until the upstream server exits, and exits with the same code. It forwards SIGINT/SIGTERM to the upstream process so it isn't left orphaned, and fails cleanly with a clear message if the upstream command can't be spawned.
+
+`sessions` lists recorded sessions, newest first, with a quick record/drift count — use it to find a session ID for `replay`/`verify` without reaching for `ls`.
 
 `replay` prints a session as an ordered, indented call chain:
 
@@ -220,6 +224,7 @@ Two further limits worth knowing about:
 - **`baseline.json` is not hash-chained.** It's a mutable index used to detect the *next* drift event; only the *derived* `DRIFT` records written into a session's JSONL are tamper-evident. The historical fact "we detected this drift on this date" is provable; the baseline used to detect it is not.
 - **`parentSeq` nesting is a LIFO-stack approximation.** If a client pipelines two sibling `tools/call`s before either resolves, the second is recorded as nested under the first rather than as a true sibling. This is exactly correct for genuine nesting (e.g. a `sampling/createMessage` request issued mid-call), and only an approximation for true concurrent siblings — acceptable for an observe-only record layer.
 - **Schema diffs compare arrays atomically**, not element-by-element (e.g. a changed `required` list is reported as one old/new pair, not a per-item diff).
+- **A single JSON-RPC line is capped at 10 MB.** A peer that emits a line larger than that without a terminating newline causes the proxy to stop and exit non-zero rather than buffer it indefinitely — the same posture the MCP SDK's own `StdioServerTransport` takes, and preferable to silently truncating a message and breaking the "unmodified relay" guarantee.
 
 ## Development
 
