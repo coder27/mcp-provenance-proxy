@@ -1,0 +1,5 @@
+node_modules/
+dist/
+.mcp-provenance/
+*.log
+.DS_Store

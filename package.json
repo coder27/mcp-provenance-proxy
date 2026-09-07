@@ -1,0 +1,36 @@
+{
+  "name": "mcp-provenance-proxy",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Transparent tamper-evident provenance proxy for MCP stdio servers.",
+  "license": "MIT",
+  "bin": {
+    "mcp-provenance-proxy": "./dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsx src/cli.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "prepublishOnly": "npm run build"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "zod": "^4.5.4"
+  },
+  "devDependencies": {
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.0",
+    "tsx": "^4.23.13",
+    "@types/node": "^22.0.0"
+  }
+}
