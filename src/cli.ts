@@ -1,5 +1,7 @@
 #!/usr/bin/env node
+import { realpathSync } from 'node:fs';
 import { parseArgs } from 'node:util';
+import { fileURLToPath } from 'node:url';
 import { loadConfig } from './config.js';
 import { listDrift } from './commands/drift.js';
 import { replaySession } from './commands/replay.js';
@@ -78,8 +80,20 @@ export async function main(argv: string[]): Promise<number> {
   }
 }
 
-const isDirectRun = process.argv[1] && import.meta.url === new URL(process.argv[1], 'file:').href;
-if (isDirectRun) {
+// process.argv[1] is the path Node was invoked with — for an npm-installed bin this is a
+// symlink (e.g. bin/mcp-provenance-proxy -> .../dist/cli.js), while import.meta.url resolves
+// through it to the real file. Resolve both to the same real path before comparing, or a
+// symlinked global install silently never runs main() at all.
+function isDirectRun(): boolean {
+  if (!process.argv[1]) return false;
+  try {
+    return fileURLToPath(import.meta.url) === realpathSync(process.argv[1]);
+  } catch {
+    return false;
+  }
+}
+
+if (isDirectRun()) {
   main(process.argv.slice(2))
     .then((code) => {
       process.exitCode = code;
