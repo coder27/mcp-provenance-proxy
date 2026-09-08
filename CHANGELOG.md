@@ -2,6 +2,13 @@
 
 All notable changes to this project are documented here. This project follows [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+
+- `mcp-provenance-proxy serve`: a second, separate read-only MCP server exposing this tool's own provenance data as MCP tools — `list_sessions`, `replay_session`, `verify_session`, `list_drift` — so an agent can query its own audit trail conversationally instead of shelling out to the CLI.
+- `examples/real-drift`: drift detection run against two real, published versions of `@modelcontextprotocol/server-filesystem` (2025.7.1 vs 2026.8.31), demonstrating actual tool-contract drift rather than a synthetic toolset swap.
+
 ## [0.1.0] - 2026-09-08
 
 Initial release.

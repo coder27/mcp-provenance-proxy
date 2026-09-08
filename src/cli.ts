@@ -1,6 +1,5 @@
 #!/usr/bin/env node
-import { readFileSync, realpathSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { realpathSync } from 'node:fs';
 import { parseArgs } from 'node:util';
 import { fileURLToPath } from 'node:url';
 import { loadConfig } from './config.js';
@@ -8,10 +7,13 @@ import { listDrift } from './commands/drift.js';
 import { replaySession } from './commands/replay.js';
 import { listSessions } from './commands/sessions.js';
 import { verifyCommand } from './commands/verify.js';
+import { runServe } from './mcp-server.js';
 import { runProxy } from './proxy/run.js';
+import { getVersion } from './version.js';
 
 const USAGE = `Usage:
   mcp-provenance-proxy run --config <path>
+  mcp-provenance-proxy serve [--storage-dir <dir>]
   mcp-provenance-proxy sessions [--storage-dir <dir>]
   mcp-provenance-proxy replay <sessionId> [--storage-dir <dir>]
   mcp-provenance-proxy verify <sessionId> [--storage-dir <dir>]
@@ -22,12 +24,6 @@ Options:
   -v, --version  Show the installed version`;
 
 const DEFAULT_STORAGE_DIR = '.mcp-provenance';
-
-function getVersion(): string {
-  const pkgPath = join(dirname(fileURLToPath(import.meta.url)), '..', 'package.json');
-  const pkg = JSON.parse(readFileSync(pkgPath, 'utf8')) as { version: string };
-  return pkg.version;
-}
 
 export async function main(argv: string[]): Promise<number> {
   const [subcommand, ...rest] = argv;
@@ -50,6 +46,15 @@ export async function main(argv: string[]): Promise<number> {
       }
       const config = loadConfig(values.config);
       return runProxy({ config, clientInput: process.stdin, clientOutput: process.stdout });
+    }
+
+    case 'serve': {
+      const { values } = parseArgs({
+        args: rest,
+        options: { 'storage-dir': { type: 'string', default: DEFAULT_STORAGE_DIR } },
+      });
+      await runServe(values['storage-dir'] as string);
+      return 0;
     }
 
     case 'sessions': {

@@ -68,12 +68,22 @@ Then point your MCP client's server launch config at the proxy instead of the re
 
 Everything the client does now flows through unmodified, and a session log accumulates under `storageDir`.
 
+Optionally, add a *second* server entry pointing at the same `storageDir` so an agent can query that provenance data directly:
+
+```json
+{
+  "command": "node",
+  "args": ["/path/to/mcp-provenance-proxy/dist/cli.js", "serve", "--storage-dir", "./.mcp-provenance"]
+}
+```
+
 See [`examples/filesystem`](examples/filesystem) for this wired up against a real, third-party MCP server (not the in-repo test fixture), with real captured output. See [`examples/real-drift`](examples/real-drift) for drift detection catching a *real* tool-contract change across two actual published versions of that same server — not a synthetic toolset swap.
 
 ## CLI reference
 
 ```
 mcp-provenance-proxy run --config <path>
+mcp-provenance-proxy serve [--storage-dir <dir>]
 mcp-provenance-proxy sessions [--storage-dir <dir>]
 mcp-provenance-proxy replay <sessionId> [--storage-dir <dir>]
 mcp-provenance-proxy verify <sessionId> [--storage-dir <dir>]
@@ -82,6 +92,8 @@ mcp-provenance-proxy --help | --version
 ```
 
 `run` is the proxy itself — it never returns until the upstream server exits, and exits with the same code. It forwards SIGINT/SIGTERM to the upstream process so it isn't left orphaned, and fails cleanly with a clear message if the upstream command can't be spawned.
+
+`serve` is a second, separate MCP server — it exposes this tool's *own* provenance data (not the upstream's) as MCP tools: `list_sessions`, `replay_session`, `verify_session`, `list_drift`. Point another MCP client at `mcp-provenance-proxy serve --storage-dir <dir>` as its own server entry (distinct from `run`, which wraps the thing being observed) and an agent can ask "what changed" or "replay this session" conversationally instead of shelling out to the CLI. All four tools are read-only — nothing here mutates anything.
 
 `sessions` lists recorded sessions, newest first, with a quick record/drift count — use it to find a session ID for `replay`/`verify` without reaching for `ls`.
 
