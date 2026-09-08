@@ -1,9 +1,28 @@
 {
   "name": "mcp-provenance-proxy",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
   "description": "Transparent tamper-evident provenance proxy for MCP stdio servers.",
   "license": "MIT",
+  "author": "coder27 <1252475+coder27@users.noreply.github.com>",
+  "homepage": "https://github.com/coder27/mcp-provenance-proxy#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/coder27/mcp-provenance-proxy.git"
+  },
+  "bugs": {
+    "url": "https://github.com/coder27/mcp-provenance-proxy/issues"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "security",
+    "audit-log",
+    "provenance",
+    "proxy",
+    "tamper-evident",
+    "drift-detection"
+  ],
   "bin": {
     "mcp-provenance-proxy": "./dist/cli.js"
   },
