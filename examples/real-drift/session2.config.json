@@ -1,0 +1,7 @@
+{
+  "upstream": {
+    "command": "npx",
+    "args": ["-y", "@modelcontextprotocol/server-filesystem@2026.8.31", "./sandbox"]
+  },
+  "storageDir": "./.mcp-provenance"
+}

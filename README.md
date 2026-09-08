@@ -68,7 +68,7 @@ Then point your MCP client's server launch config at the proxy instead of the re
 
 Everything the client does now flows through unmodified, and a session log accumulates under `storageDir`.
 
-See [`examples/filesystem`](examples/filesystem) for this wired up against a real, third-party MCP server (not the in-repo test fixture), with real captured output.
+See [`examples/filesystem`](examples/filesystem) for this wired up against a real, third-party MCP server (not the in-repo test fixture), with real captured output. See [`examples/real-drift`](examples/real-drift) for drift detection catching a *real* tool-contract change across two actual published versions of that same server — not a synthetic toolset swap.
 
 ## CLI reference
 
