@@ -1,6 +1,6 @@
 {
   "name": "mcp-provenance-proxy",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "type": "module",
   "description": "Transparent tamper-evident provenance proxy for MCP stdio servers.",
   "license": "MIT",

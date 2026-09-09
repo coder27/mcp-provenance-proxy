@@ -88,12 +88,13 @@ mcp-provenance-proxy sessions [--storage-dir <dir>]
 mcp-provenance-proxy replay <sessionId> [--storage-dir <dir>]
 mcp-provenance-proxy verify <sessionId> [--storage-dir <dir>]
 mcp-provenance-proxy drift [--session <sessionId>] [--storage-dir <dir>]
+mcp-provenance-proxy history <toolName> [--storage-dir <dir>]
 mcp-provenance-proxy --help | --version
 ```
 
 `run` is the proxy itself — it never returns until the upstream server exits, and exits with the same code. It forwards SIGINT/SIGTERM to the upstream process so it isn't left orphaned, and fails cleanly with a clear message if the upstream command can't be spawned.
 
-`serve` is a second, separate MCP server — it exposes this tool's *own* provenance data (not the upstream's) as MCP tools: `list_sessions`, `replay_session`, `verify_session`, `list_drift`. Point another MCP client at `mcp-provenance-proxy serve --storage-dir <dir>` as its own server entry (distinct from `run`, which wraps the thing being observed) and an agent can ask "what changed" or "replay this session" conversationally instead of shelling out to the CLI. All four tools are read-only — nothing here mutates anything.
+`serve` is a second, separate MCP server — it exposes this tool's *own* provenance data (not the upstream's) as MCP tools: `list_sessions`, `replay_session`, `verify_session`, `list_drift`, `tool_history`. Point another MCP client at `mcp-provenance-proxy serve --storage-dir <dir>` as its own server entry (distinct from `run`, which wraps the thing being observed) and an agent can ask "what changed" or "replay this session" conversationally instead of shelling out to the CLI. All five tools are read-only — nothing here mutates anything.
 
 `sessions` lists recorded sessions, newest first, with a quick record/drift count — use it to find a session ID for `replay`/`verify` without reaching for `ls`.
 
@@ -121,6 +122,23 @@ TAMPERED: line 6: hash-mismatch-tampered (expected "8c5af524...", got "5366b5fc.
 ```
 
 `drift` lists every `DRIFT` record, across all sessions or scoped to one with `--session`.
+
+`history <toolName>` reconstructs one tool's full version timeline across every session: the first description/schema ever observed for it, then every subsequent `description-changed`/`schema-changed` event in order. This is a pure read-side view — no new data is captured for it, it's assembled from the `tools/list` responses and `DRIFT` records already on disk:
+
+```
+$ mcp-provenance-proxy history read_file
+v1  2026-09-09T06:08:52.003Z  [mttp6xpu-5ece5ca5]  first-seen
+  description: Read the complete contents of a file from the file system. Handles various text
+  encodings and provides detailed error messages if the file cannot be read. ...
+  inputSchema: {"$schema":"http://json-schema.org/draft-07/schema#"}
+
+v2  2026-09-09T06:08:53.018Z  [mttp6yli-afb436a1]  description-changed
+  old: Read the complete contents of a file from the file system. ...
+  new: Read the complete contents of a file as text. DEPRECATED: Use read_text_file instead.
+
+v3  2026-09-09T06:08:53.018Z  [mttp6yli-afb436a1]  schema-changed
+  schemaDiff: [{"path":"type","change":"added","newValue":"object"}, ...]
+```
 
 ## Provenance record format
 

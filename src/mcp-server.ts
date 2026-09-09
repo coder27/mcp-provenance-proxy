@@ -2,6 +2,7 @@ import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 import { listDrift } from './commands/drift.js';
+import { toolHistory } from './commands/history.js';
 import { replaySession } from './commands/replay.js';
 import { listSessions } from './commands/sessions.js';
 import { verifyCommand } from './commands/verify.js';
@@ -40,6 +41,16 @@ const TOOLS = [
     inputSchema: {
       type: 'object',
       properties: { sessionId: { type: 'string', description: 'Optional: scope to one session' } },
+    },
+  },
+  {
+    name: 'tool_history',
+    description:
+      'Show the full version history of one tool across all sessions: the first description/schema ever observed for it, followed by every description-changed and schema-changed drift event since, in order.',
+    inputSchema: {
+      type: 'object',
+      properties: { toolName: { type: 'string', description: 'Tool name, e.g. from list_drift' } },
+      required: ['toolName'],
     },
   },
 ] as const;
@@ -85,6 +96,14 @@ export function createProvenanceServer(storageDir: string): Server {
 
       case 'list_drift':
         return textResult(listDrift(storageDir, sessionId));
+
+      case 'tool_history': {
+        const toolName = typeof (args as Record<string, unknown> | undefined)?.toolName === 'string'
+          ? (args as { toolName: string }).toolName
+          : undefined;
+        if (!toolName) return errorResult('toolName is required');
+        return textResult(toolHistory(storageDir, toolName));
+      }
 
       default:
         return errorResult(`Unknown tool: ${String(name)}`);

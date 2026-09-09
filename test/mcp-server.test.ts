@@ -99,13 +99,28 @@ async function initialize(): Promise<void> {
 }
 
 describe('mcp-provenance-proxy serve', () => {
-  it('advertises list_sessions, replay_session, verify_session, list_drift', async () => {
+  it('advertises list_sessions, replay_session, verify_session, list_drift, tool_history', async () => {
     startServer();
     await initialize();
     send({ jsonrpc: '2.0', id: nextId++, method: 'tools/list', params: {} });
     const response = JSON.parse(await reader.next());
     const names = response.result.tools.map((t: { name: string }) => t.name).sort();
-    expect(names).toEqual(['list_drift', 'list_sessions', 'replay_session', 'verify_session']);
+    expect(names).toEqual(['list_drift', 'list_sessions', 'replay_session', 'tool_history', 'verify_session']);
+  }, 20000);
+
+  it('tool_history surfaces the drift record for a real tool and rejects a missing toolName', async () => {
+    seedSession('sess-1');
+    startServer();
+    await initialize();
+
+    const history = await callTool('tool_history', { toolName: 'search_notes' });
+    expect(history.result.content[0].text).toMatch(/description-changed/);
+    expect(history.result.content[0].text).toMatch(/old: benign/);
+    expect(history.result.content[0].text).toMatch(/new: escalated/);
+
+    const missingArg = await callTool('tool_history', {});
+    expect(missingArg.result.isError).toBe(true);
+    expect(missingArg.result.content[0].text).toMatch(/toolName is required/);
   }, 20000);
 
   it('list_sessions reflects real session files on disk', async () => {

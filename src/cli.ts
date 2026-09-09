@@ -4,6 +4,7 @@ import { parseArgs } from 'node:util';
 import { fileURLToPath } from 'node:url';
 import { loadConfig } from './config.js';
 import { listDrift } from './commands/drift.js';
+import { toolHistory } from './commands/history.js';
 import { replaySession } from './commands/replay.js';
 import { listSessions } from './commands/sessions.js';
 import { verifyCommand } from './commands/verify.js';
@@ -18,6 +19,7 @@ const USAGE = `Usage:
   mcp-provenance-proxy replay <sessionId> [--storage-dir <dir>]
   mcp-provenance-proxy verify <sessionId> [--storage-dir <dir>]
   mcp-provenance-proxy drift [--session <sessionId>] [--storage-dir <dir>]
+  mcp-provenance-proxy history <toolName> [--storage-dir <dir>]
 
 Options:
   -h, --help     Show this help
@@ -106,6 +108,21 @@ export async function main(argv: string[]): Promise<number> {
         },
       });
       console.log(listDrift(values['storage-dir'] as string, values.session as string | undefined));
+      return 0;
+    }
+
+    case 'history': {
+      const { values, positionals } = parseArgs({
+        args: rest,
+        allowPositionals: true,
+        options: { 'storage-dir': { type: 'string', default: DEFAULT_STORAGE_DIR } },
+      });
+      const toolName = positionals[0];
+      if (!toolName) {
+        console.error(USAGE);
+        return 1;
+      }
+      console.log(toolHistory(values['storage-dir'] as string, toolName));
       return 0;
     }
 

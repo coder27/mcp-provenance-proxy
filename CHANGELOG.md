@@ -2,6 +2,12 @@
 
 All notable changes to this project are documented here. This project follows [Semantic Versioning](https://semver.org/).
 
+## [0.3.0] - 2026-09-09
+
+### Added
+
+- `mcp-provenance-proxy history <toolName>` (and the matching `tool_history` MCP tool in `serve`): reconstructs one tool's full version timeline — first-ever description/schema, then every subsequent change — purely from existing session records, no new capture logic.
+
 ## [0.2.0] - 2026-09-08
 
 ### Added
